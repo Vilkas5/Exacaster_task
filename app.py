@@ -13,12 +13,14 @@ api_key.py. Neither key ever appears in this file.
 import streamlit as st
 
 import api_key
+import auth
 import tab_demo
 import tab_feasibility
 import tab_solution
 
 st.set_page_config(page_title="Document Analysis POC", page_icon="📄", layout="wide")
 api_key.load()
+auth.require_access_password()
 
 if not api_key.has("ANTHROPIC_API_KEY"):
     st.error(
@@ -51,6 +53,7 @@ with st.sidebar:
         "(stage 3). Topic clustering itself (stage 2) runs on local "
         "embeddings, not this model — see the Proposed Solution tab."
     )
+    auth.render_admin_panel()
 
 demo_tab, feasibility_tab, solution_tab = st.tabs(
     ["🔍 Live Demo", "✅ Feasibility Assessment", "🧩 Proposed Solution"]
