@@ -13,7 +13,7 @@ import streamlit as st
 
 import api_key
 import drive_source
-from claude_client import ask_claude
+from claude_client import analyze_documents
 from document_utils import extract_text
 
 st.set_page_config(page_title="Document Analysis POC", page_icon="📄", layout="wide")
@@ -29,10 +29,9 @@ if not api_key.has("ANTHROPIC_API_KEY"):
 
 st.title("📄 Document Analysis — Claude Connection POC")
 st.caption(
-    "Pull documents from a Google Drive folder (or upload manually), then send "
-    "them to Claude. This is the first step: proving the ingestion → LLM → "
-    "response pipeline works before adding topic extraction and perspective "
-    "analysis."
+    "Pull documents from a Google Drive folder (or upload manually), then let "
+    "Claude identify the primary topics across the whole set and each "
+    "document's own perspective on them."
 )
 
 MODELS = {
@@ -43,10 +42,11 @@ MODELS = {
 
 with st.sidebar:
     st.header("Settings")
-    model_label = st.selectbox("Model", options=list(MODELS.keys()), index=0)
+    model_label = st.selectbox("Model", options=list(MODELS.keys()), index=2)
     model = MODELS[model_label]
 
 st.session_state.setdefault("drive_documents", {})
+st.session_state.setdefault("analysis", None)
 
 st.subheader("Load from Google Drive")
 DEFAULT_FOLDER_URL = "https://drive.google.com/drive/folders/16Q5mW_NbAO6DbeUO3zRfuXJypLV3H7ew"
@@ -121,35 +121,37 @@ if documents:
         with st.expander(f"{name} ({len(text):,} characters)"):
             st.text(text[:2000] + ("..." if len(text) > 2000 else ""))
 
-default_prompt = (
-    "Summarize the key topics discussed in the document(s) below, and briefly "
-    "describe the perspective or stance each document takes on those topics."
-)
-instruction = st.text_area("Instruction / prompt sent to Claude", value=default_prompt, height=100)
+analyze_clicked = st.button("Analyze Documents", type="primary", disabled=not documents)
 
-send = st.button("Send to Claude", type="primary", disabled=not documents)
+if analyze_clicked:
+    with st.spinner("Analyzing with Claude..."):
+        st.session_state.analysis = analyze_documents(documents, model=model)
 
-if send:
-    combined = "\n\n".join(
-        f"=== Document: {name} ===\n{text}" for name, text in documents.items()
-    )
-    full_prompt = f"{instruction}\n\n{combined}"
+analysis = st.session_state.get("analysis")
 
-    with st.spinner("Waiting for Claude..."):
-        response = ask_claude(full_prompt, model=model)
-
-    if response.is_error:
-        st.error(response.text)
+if analysis is not None:
+    if analysis.is_error:
+        st.error(analysis.error_message)
     else:
-        st.subheader("Response")
-        st.markdown(response.text or "_(empty response)_")
+        result = analysis.result
+
+        st.subheader("Overall Topics")
+        for topic in result.overall_topics:
+            st.markdown(f"- {topic}")
+
+        with st.expander("📋 Per-Document Topics and Stance", expanded=False):
+            for doc in result.documents:
+                st.markdown(f"**{doc.name}**")
+                st.markdown(f"Topics: {', '.join(doc.topics)}")
+                st.markdown(f"Stance: {doc.stance}")
+                st.divider()
 
         with st.expander("Run details"):
             st.write(
                 {
-                    "model": response.model,
-                    "input_tokens": response.input_tokens,
-                    "output_tokens": response.output_tokens,
-                    "estimated_cost_usd": response.total_cost_usd,
+                    "model": analysis.model,
+                    "input_tokens": analysis.input_tokens,
+                    "output_tokens": analysis.output_tokens,
+                    "estimated_cost_usd": analysis.total_cost_usd,
                 }
             )
