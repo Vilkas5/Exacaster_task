@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+streamlit.log
+.streamlit/
+.env
+GenAI-Homework-task.pdf
