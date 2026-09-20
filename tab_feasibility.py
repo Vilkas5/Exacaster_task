@@ -61,6 +61,37 @@ def render() -> None:
         "per document in API usage — see the live numbers below."
     )
 
+    st.subheader("How this was validated — not just designed, tested")
+    st.markdown(
+        "The pipeline went through two real rounds of testing against the "
+        "actual sample documents, and both surfaced genuine problems worth "
+        "being upfront about — along with how each was fixed:"
+    )
+    st.markdown(
+        "- **First test run: too many near-duplicate topics.** Asking each "
+        "document for its topics without constraint produced 70+ narrow, "
+        "inconsistent phrases across just 10 documents (mixing broad "
+        "themes with hyper-specific technical sub-points, e.g. "
+        "*'BM25 keyword-based retrieval'* sitting alongside *'AI "
+        "Hallucinations'*). No clustering threshold could fix this — the "
+        "root cause was that the per-document extraction step needed "
+        "tighter instructions (favor a few *broad* topics, not an "
+        "exhaustive list), not a clustering tweak. Fixing the prompt, not "
+        "the math, brought this down to a clean, non-redundant topic list.\n"
+        "- **Second finding: short phrases don't always embed close "
+        "together, even as clear synonyms.** *'AI Hallucinations'* and "
+        "*'LLM Hallucinations'* — obviously the same topic to a person — "
+        "didn't automatically land in the same cluster. This is a known "
+        "limitation of embedding *short* phrases rather than full "
+        "sentences (less context for the model to work with), not a bug. "
+        "It's the concrete reason the pipeline includes a small cleanup "
+        "step after clustering, rather than trusting embeddings alone."
+    )
+    st.caption(
+        "Neither issue is hypothetical — both were caught by actually running "
+        "the pipeline against the sample set, not anticipated in advance."
+    )
+
     st.subheader("Illustrative example — this session's run")
     analysis = st.session_state.get("analysis")
     if analysis is None or analysis.is_error or analysis.result is None:

@@ -8,10 +8,6 @@ Claude via the Anthropic API (ANTHROPIC_API_KEY) and, optionally, to a public
 Google Drive folder via the Drive API (GOOGLE_API_KEY) — both resolved
 safely for local dev (.env) and Streamlit Cloud (secrets manager), see
 api_key.py. Neither key ever appears in this file.
-
-The Feasibility Assessment / Proposed Solution write-ups (tab_feasibility.py,
-tab_solution.py) are kept in the repo as presentation reference material but
-deliberately not wired in here — that narrative is presented live instead.
 """
 
 import streamlit as st
@@ -19,6 +15,8 @@ import streamlit as st
 import api_key
 import auth
 import tab_demo
+import tab_feasibility
+import tab_solution
 
 st.set_page_config(page_title="Document Analysis POC", page_icon="📄", layout="wide")
 api_key.load()
@@ -53,7 +51,18 @@ with st.sidebar:
     st.caption(
         "Used to read each document (stage 1) and to clean up topic labels "
         "(stage 3). Topic clustering itself (stage 2) runs on local "
-        "embeddings, not this model."
+        "embeddings, not this model — see the Proposed Solution tab."
     )
 
-tab_demo.render(model=model)
+demo_tab, feasibility_tab, solution_tab = st.tabs(
+    ["🔍 Live Demo", "✅ Feasibility Assessment", "🧩 Proposed Solution"]
+)
+
+with demo_tab:
+    tab_demo.render(model=model)
+
+with feasibility_tab:
+    tab_feasibility.render()
+
+with solution_tab:
+    tab_solution.render()

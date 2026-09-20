@@ -73,6 +73,49 @@ def render() -> None:
         "reflect what the *whole set* is actually about, per the brief."
     )
 
+    st.subheader("What we tried first, and why we changed course")
+    st.markdown(
+        "This wasn't the first design — it's the third, and each step "
+        "back was driven by a concrete limitation, not a hypothetical one:"
+    )
+    st.markdown(
+        "1. **First attempt: paste every document into one AI request.** "
+        "Simplest possible approach, and it worked fine for our small "
+        "10-document sample. But the request keeps growing as documents "
+        "are added — more documents means a bigger prompt, which costs "
+        "more and eventually won't fit at all. Ruled out for anything "
+        "described as needing to reach 'hundreds of documents.'\n"
+        "2. **Second attempt: read documents separately, then one AI call "
+        "to combine the summaries.** Better — each document read stays "
+        "small regardless of corpus size. But the *combining* call still "
+        "read every document's summary at once, so its size (and cost) "
+        "still crept up with document count, just more slowly than "
+        "attempt 1.\n"
+        "3. **Current design: replace that combining call with the "
+        "fingerprint-matching step described above.** The step that used "
+        "to grow with document count no longer involves the AI at all, "
+        "so it stopped being a scaling concern entirely — the only "
+        "remaining AI cost that touches the *whole* topic list is the "
+        "small, one-time polish in step 3, which is sized by how many "
+        "distinct topics exist (typically a few dozen), not how many "
+        "documents there are."
+    )
+    st.markdown(
+        "A few smaller choices worth explaining too:\n"
+        "- **A small model that runs locally, not a bigger or hosted "
+        "one, for the fingerprint-matching step.** A larger or "
+        "cloud-hosted option would likely match near-duplicate topics a "
+        "little more precisely, but adds a dependency, a cost per call, "
+        "and a heavier install — not worth it for the accuracy gap in "
+        "this case, and an easy, low-risk swap later if ever needed.\n"
+        "- **A cheap, fast model for reading documents; a more capable "
+        "one only where it's cheap to upgrade.** The per-document read "
+        "(step 1) happens once per document, so it uses the fastest, "
+        "cheapest option. The one-time steps that don't repeat per "
+        "document can afford a stronger model without materially "
+        "changing the cost."
+    )
+
     st.subheader("What's demonstrated today vs. what comes next")
     st.markdown(
         "- **Demonstrated live in this app:** the full pipeline above, "
