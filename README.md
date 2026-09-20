@@ -24,7 +24,7 @@ three-stage pipeline:
 
 | Stage | What happens | Cost driver |
 |---|---|---|
-| **1. Map** | Claude reads each document *independently* (in parallel) and extracts its own local topics + stance | Scales linearly with document count, but each call is small and independent |
+| **1. Map** | Claude reads each document *independently* (in parallel) and extracts its own local topics, each paired with a stance specific to that topic (not one blended summary) | Scales linearly with document count, but each call is small and independent |
 | **2. Cluster** | Local embeddings (no API call) group near-duplicate topic phrases across all documents — e.g. "AI Hallucinations" and "LLM Hallucinations" get merged | Free, near-instant, doesn't grow with corpus size |
 | **3. Cleanup** | One small Claude call polishes final labels and catches any near-duplicates the embedding step missed | Sized by *topic count* (typically a few dozen), not document count |
 

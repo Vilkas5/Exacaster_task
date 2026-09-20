@@ -32,18 +32,26 @@ _RETRYABLE_ERRORS = (
 )
 
 
-class DocumentTopics(BaseModel):
-    """Stage 1 (map) output: one document's own local topics + stance,
-    read in isolation — before we know what the other documents say."""
+class TopicStance(BaseModel):
+    topic: str
+    stance: str
 
-    topics: list[str]
-    stance_summary: str
+
+class DocumentTopics(BaseModel):
+    """Stage 1 (map) output: one document's own local topics, each paired
+    with its stance ON that specific topic — read in isolation, before we
+    know what the other documents say or what the final corpus-wide topic
+    labels will be."""
+
+    topic_stances: list[TopicStance]
 
 
 class DocumentAnalysis(BaseModel):
     name: str
-    topics: list[str]
-    stance: str
+    # Perspective on each identified (final, corpus-wide) topic this
+    # document covers — not one combined summary. Directly answers "this
+    # document's perspective on the identified topics," topic by topic.
+    topic_stances: list[TopicStance]
 
 
 class AnalysisResult(BaseModel):
@@ -115,15 +123,19 @@ def _extract_document_topics(
     """
     client = anthropic.Anthropic()
     prompt = (
-        "Read the document below in isolation and extract:\n"
-        "1. Its 2-4 BROAD subject-matter topics — general subject areas a "
-        "reader would use to categorize this document on a shelf (e.g. "
+        "Read the document below in isolation and identify its 2-4 BROAD "
+        "subject-matter topics — general subject areas a reader would use "
+        "to categorize this document on a shelf (e.g. "
         "'Retrieval-Augmented Generation', 'AI Hallucinations'), NOT narrow "
         "technical sub-points, specific techniques, or sentence-length "
         "descriptions. These will be clustered against other documents' "
         "topics later, so favor short, general, reusable phrases a different "
-        "document on a similar subject would plausibly also produce.\n"
-        "2. A concise 2-3 sentence summary of its perspective or stance.\n\n"
+        "document on a similar subject would plausibly also produce.\n\n"
+        "For EACH of those topics individually, write a 1-2 sentence "
+        "stance: what does this document specifically say or argue about "
+        "THAT topic? Not a general summary of the whole document — its "
+        "position on that one topic in particular. Different topics from "
+        "the same document may reasonably have different stances.\n\n"
         f"Document: {name}\n\n{text}"
     )
     try:
@@ -204,7 +216,8 @@ def analyze_documents(
     document's own perspective on those topics — via a three-stage pipeline:
 
     1. Map (LLM, parallel, once per document): read each document in
-       isolation and extract its own local topics + stance. Bounded by a
+       isolation and extract its own local topics, each with a stance
+       specific to that topic (not one combined summary). Bounded by a
        single document's length per call, however large the corpus is.
     2. Cluster (local embeddings, no LLM, no API key): embed every local
        topic phrase and group near-duplicates with agglomerative clustering.
@@ -219,8 +232,8 @@ def analyze_documents(
     min_topic_coverage: a topic must be covered by at least this many
     documents to count as "primary" (AnalysisResult.overall_topics); topics
     below that land in minor_topics instead of inflating the headline list
-    with single-document one-offs. Each document's own .topics still lists
-    everything it covers, regardless of this threshold.
+    with single-document one-offs. Each document's own .topic_stances still
+    lists everything it covers, regardless of this threshold.
     """
     per_document: dict[str, DocumentTopics] = {}
     warnings: list[str] = []
@@ -263,7 +276,7 @@ def analyze_documents(
 
     # Stage 2 (cluster) — local embeddings, no API call, no per-document cost.
     clustered = topic_clustering.cluster_topics(
-        {name: dt.topics for name, dt in per_document.items()},
+        {name: [ts.topic for ts in dt.topic_stances] for name, dt in per_document.items()},
         distance_threshold=distance_threshold,
     )
     doc_counts = {
@@ -294,14 +307,28 @@ def analyze_documents(
     overall_topics = [t for t in ranked_topics if final_doc_counts[t] >= min_topic_coverage]
     minor_topics = [t for t in ranked_topics if final_doc_counts[t] < min_topic_coverage]
 
-    result_documents = [
-        DocumentAnalysis(
-            name=name,
-            topics=list(dict.fromkeys(mapping.get(t, t) for t in clustered.documents[name])),
-            stance=per_document[name].stance_summary,
+    result_documents = []
+    for name, dt in per_document.items():
+        # For each of this document's own local (topic, stance) pairs, find
+        # the FINAL canonical topic it ended up under: local phrase -> raw
+        # cluster label (stage 2) -> cleaned final label (stage 3). If two
+        # local topics from the same document collapse into the same final
+        # topic, combine their stances rather than silently drop one.
+        stance_by_final_topic: dict[str, list[str]] = {}
+        for ts in dt.topic_stances:
+            raw_topic = clustered.phrase_to_topic.get(ts.topic, ts.topic)
+            final_topic = mapping.get(raw_topic, raw_topic)
+            stance_by_final_topic.setdefault(final_topic, []).append(ts.stance)
+
+        result_documents.append(
+            DocumentAnalysis(
+                name=name,
+                topic_stances=[
+                    TopicStance(topic=topic, stance=" ".join(dict.fromkeys(stances)))
+                    for topic, stances in stance_by_final_topic.items()
+                ],
+            )
         )
-        for name in per_document
-    ]
 
     return AnalysisResponse(
         result=AnalysisResult(

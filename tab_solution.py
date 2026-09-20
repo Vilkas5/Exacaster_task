@@ -17,11 +17,14 @@ def render() -> None:
     st.subheader("How it works, in three steps")
     st.markdown(
         "**1. Read each document on its own.** For every document, ask the "
-        "AI to pull out a few broad topics and its overall stance. Each "
-        "read doesn't need to know about any other document, so many "
-        "documents can be read *at the same time* instead of one after "
-        "another. Adding more documents mostly costs more parallel time, "
-        "not more sequential time."
+        "AI to pull out a few broad topics — and, for each one "
+        "individually, what this specific document says about that topic. "
+        "Not one blended summary of the whole document — a separate stance "
+        "per topic, since the same document can take different positions "
+        "on different things it discusses. Each read doesn't need to know "
+        "about any other document, so many documents can be read *at the "
+        "same time* instead of one after another. Adding more documents "
+        "mostly costs more parallel time, not more sequential time."
     )
     st.markdown(
         "**2. Group similar topics together automatically.** Every "

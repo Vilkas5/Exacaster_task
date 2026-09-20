@@ -130,8 +130,8 @@ def render(model: str) -> None:
             with st.expander("📋 Per-Document Topics and Stance", expanded=False):
                 for doc in result.documents:
                     st.markdown(f"**{doc.name}**")
-                    st.markdown(f"Topics: {', '.join(doc.topics)}")
-                    st.markdown(f"Stance: {doc.stance}")
+                    for ts in doc.topic_stances:
+                        st.markdown(f"- **{ts.topic}:** {ts.stance}")
                     st.divider()
 
             if analysis.warnings:

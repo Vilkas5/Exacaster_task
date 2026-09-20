@@ -31,6 +31,10 @@ class ClusteredTopics:
     overall_topics: list[str]
     # documents[doc_name] -> the canonical topics (from overall_topics) it covers.
     documents: dict[str, list[str]]
+    # Every original phrase -> the canonical label its cluster resolved to.
+    # Lets a caller carry per-phrase data (e.g. a stance written about that
+    # specific phrase) through to the canonical topic it ended up under.
+    phrase_to_topic: dict[str, str]
 
 
 def cluster_topics(
@@ -44,7 +48,11 @@ def cluster_topics(
     unique_phrases = sorted({phrase for _, phrase in pairs})
 
     if not unique_phrases:
-        return ClusteredTopics(overall_topics=[], documents={name: [] for name in per_document_topics})
+        return ClusteredTopics(
+            overall_topics=[],
+            documents={name: [] for name in per_document_topics},
+            phrase_to_topic={},
+        )
 
     # A short template gives the embedding model a bit more context than a
     # bare noun phrase, which measurably improves separation between
@@ -93,4 +101,8 @@ def cluster_topics(
             cluster_label[c] for c in ordered_cluster_ids if c in covered_clusters
         ]
 
-    return ClusteredTopics(overall_topics=overall_topics, documents=documents)
+    phrase_to_topic = {phrase: cluster_label[phrase_to_cluster[phrase]] for phrase in unique_phrases}
+
+    return ClusteredTopics(
+        overall_topics=overall_topics, documents=documents, phrase_to_topic=phrase_to_topic
+    )

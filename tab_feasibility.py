@@ -13,9 +13,9 @@ _BAR_COLOR = "#2563eb"
 def _topic_coverage_chart(result: AnalysisResult) -> alt.Chart:
     counts = {t: 0 for t in result.overall_topics}
     for doc in result.documents:
-        for t in doc.topics:
-            if t in counts:
-                counts[t] += 1
+        for ts in doc.topic_stances:
+            if ts.topic in counts:
+                counts[ts.topic] += 1
 
     df = pd.DataFrame({"Topic": list(counts.keys()), "Documents": list(counts.values())})
     df = df.sort_values("Documents", ascending=False)
@@ -52,11 +52,15 @@ def render() -> None:
         "should be reframed philosophically as *\"bullshit\"* (in Frankfurt's "
         "sense) from the practitioner pieces focused on technical causes and "
         "fixes — a distinction a keyword-based approach would likely miss.\n"
-        "- Picked up differing stances on the *same* topic: one practitioner "
-        "took a pragmatic, risk-based, human-in-the-loop stance on "
-        "hallucination mitigation, while another took a more optimistic "
-        "\"fully solvable\" stance — both about the same subject, correctly "
-        "told apart.\n"
+        "- Records each document's stance **per topic**, not one blended "
+        "summary — directly matching the brief's second priority "
+        "(\"perspective on the identified topics\", plural). One "
+        "practitioner's piece took a pragmatic, risk-based, "
+        "human-in-the-loop stance specifically on hallucination "
+        "mitigation, while another took a more optimistic \"fully "
+        "solvable\" stance on that same topic — correctly told apart, "
+        "attached to that topic specifically rather than folded into a "
+        "single paragraph about the whole document.\n"
         "- Ran in well under a minute and cost a small fraction of a cent "
         "per document in API usage — see the live numbers below."
     )
@@ -111,7 +115,7 @@ def render() -> None:
         )
 
         st.caption("How many documents touch each identified topic:")
-        st.altair_chart(_topic_coverage_chart(result), use_container_width=True)
+        st.altair_chart(_topic_coverage_chart(result), width="stretch")
 
     st.subheader("Where GenAI struggles — limitations to flag")
     st.markdown(
