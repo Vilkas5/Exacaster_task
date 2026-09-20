@@ -17,6 +17,14 @@ def render(model: str) -> None:
     st.session_state.setdefault("drive_documents", {})
     st.session_state.setdefault("analysis", None)
 
+    st.warning(
+        "⚠️ **Limited funds remaining on this API key (~$1).** Each "
+        "analysis run costs roughly $0.01–0.02 per document, so please "
+        "test sparingly — a handful of runs will exhaust it. If it runs "
+        "out, the key needs to be replaced in Streamlit Cloud → Manage "
+        "app → Secrets before the demo will work again."
+    )
+
     st.subheader("Load from Google Drive")
     folder_input = st.text_input("Drive folder URL or ID", value=DEFAULT_FOLDER_URL)
 
