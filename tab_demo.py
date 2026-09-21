@@ -127,11 +127,28 @@ def render(model: str) -> None:
                     for topic in result.minor_topics:
                         st.markdown(f"- {topic}")
 
-            with st.expander("📋 Per-Document Topics and Stance", expanded=False):
+            with st.expander("📋 Per-Document Stance on Main Topics", expanded=False):
                 for doc in result.documents:
                     st.markdown(f"**{doc.name}**")
-                    for ts in doc.topic_stances:
-                        st.markdown(f"- **{ts.topic}:** {ts.stance}")
+                    stance_by_topic = {ts.topic: ts.stance for ts in doc.topic_stances}
+
+                    not_mentioned = []
+                    for topic in result.overall_topics:
+                        if topic in stance_by_topic:
+                            st.markdown(f"- **{topic}:** {stance_by_topic[topic]}")
+                        else:
+                            not_mentioned.append(topic)
+
+                    if not_mentioned:
+                        st.markdown(f"*Not mentioned topics: {', '.join(not_mentioned)}*")
+
+                    extra_topics = [t for t in stance_by_topic if t not in result.overall_topics]
+                    if extra_topics:
+                        st.caption(
+                            "Also touches on (minor topics): "
+                            + ", ".join(f"**{t}** — {stance_by_topic[t]}" for t in extra_topics)
+                        )
+
                     st.divider()
 
             if analysis.warnings:

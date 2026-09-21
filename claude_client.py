@@ -123,25 +123,30 @@ def _extract_document_topics(
     """
     client = anthropic.Anthropic()
     prompt = (
-        "Read the document below in isolation and identify its 2-4 BROAD "
-        "subject-matter topics — general subject areas a reader would use "
-        "to categorize this document on a shelf (e.g. "
-        "'Retrieval-Augmented Generation', 'AI Hallucinations'), NOT narrow "
-        "technical sub-points, specific techniques, or sentence-length "
-        "descriptions. These will be clustered against other documents' "
-        "topics later, so favor short, general, reusable phrases a different "
-        "document on a similar subject would plausibly also produce.\n\n"
-        "For EACH of those topics individually, write a 1-2 sentence "
-        "stance: what does this document specifically say or argue about "
-        "THAT topic? Not a general summary of the whole document — its "
-        "position on that one topic in particular. Different topics from "
-        "the same document may reasonably have different stances.\n\n"
+        "Read the document below in isolation and identify 4-8 distinct "
+        "subject-matter topics it covers — general subject areas a reader "
+        "would use to categorize this document (e.g. "
+        "'Retrieval-Augmented Generation', 'AI Hallucinations'), still "
+        "favoring short, reusable phrases a different document on a "
+        "similar subject would plausibly also produce, rather than "
+        "sentence-length descriptions. With 4-8 to identify, it's fine to "
+        "go a little more specific than a bare handful of the broadest "
+        "possible categories — just don't list narrow technical minutiae "
+        "as if they were standalone topics.\n\n"
+        "For EACH of those topics individually, write a 2-3 sentence "
+        "stance with real substance: what does this document specifically "
+        "say, argue, or find about THAT topic? Include concrete detail "
+        "from the document (specific claims, findings, or reasoning), not "
+        "just a vague characterization. Not a general summary of the "
+        "whole document — its position on that one topic in particular. "
+        "Different topics from the same document may reasonably have "
+        "different stances.\n\n"
         f"Document: {name}\n\n{text}"
     )
     try:
         response = client.messages.parse(
             model=model,
-            max_tokens=2000,
+            max_tokens=4000,
             messages=[{"role": "user", "content": prompt}],
             output_format=DocumentTopics,
         )
