@@ -24,7 +24,7 @@ def render(model: str) -> None:
         "again."
     )
 
-    st.subheader("Load from Google Drive")
+    st.header("Load from Google Drive")
     folder_input = st.text_input("Drive folder URL or ID", value=DEFAULT_FOLDER_URL)
 
     col1, col2 = st.columns([1, 1])
@@ -74,7 +74,7 @@ def render(model: str) -> None:
             except Exception as e:  # noqa: BLE001 — surface any Drive/network error
                 st.error(f"Failed to fetch from Drive: {e}")
 
-    st.subheader("Or upload manually")
+    st.header("Or upload manually")
     uploaded_files = st.file_uploader(
         "Upload documents",
         type=["txt", "pdf", "docx"],
@@ -92,7 +92,7 @@ def render(model: str) -> None:
     documents: dict[str, str] = {**st.session_state.drive_documents, **uploaded_documents}
 
     if documents:
-        st.subheader(f"Documents ready for analysis ({len(documents)})")
+        st.header(f"Documents ready for analysis ({len(documents)})")
         for name, text in documents.items():
             with st.expander(f"{name} ({len(text):,} characters)"):
                 st.text(text[:2000] + ("..." if len(text) > 2000 else ""))
@@ -115,18 +115,11 @@ def render(model: str) -> None:
         else:
             result = analysis.result
 
-            st.subheader("Overall Topics — primary themes across the whole set")
+            st.header("Overall Topics — primary themes across the whole set")
             for topic in result.overall_topics:
                 st.markdown(f"- {topic}")
 
-            if result.minor_topics:
-                with st.expander(
-                    f"+ {len(result.minor_topics)} more topic(s) mentioned in only one document"
-                ):
-                    for topic in result.minor_topics:
-                        st.markdown(f"- {topic}")
-
-            with st.expander("📋 Per-Document Stance on Main Topics", expanded=False):
+            with st.expander("Per-Document Stance on Main Topics", expanded=False):
                 for doc in result.documents:
                     st.markdown(f"**{doc.name}**")
                     stance_by_topic = {ts.topic: ts.stance for ts in doc.topic_stances}
@@ -140,13 +133,6 @@ def render(model: str) -> None:
 
                     if not_mentioned:
                         st.markdown(f"*Not mentioned topics: {', '.join(not_mentioned)}*")
-
-                    extra_topics = [t for t in stance_by_topic if t not in result.overall_topics]
-                    if extra_topics:
-                        st.caption(
-                            "Also touches on (minor topics): "
-                            + ", ".join(f"**{t}** — {stance_by_topic[t]}" for t in extra_topics)
-                        )
 
                     st.divider()
 
@@ -162,7 +148,7 @@ def render(model: str) -> None:
                         "documents_failed": analysis.documents_failed,
                         "model (stage 1 + stage 3)": analysis.model,
                         "raw_clusters_before_cleanup": analysis.raw_cluster_count,
-                        "final_topics": len(result.overall_topics) + len(result.minor_topics),
+                        "main_topics": len(result.overall_topics),
                         "input_tokens": analysis.input_tokens,
                         "output_tokens": analysis.output_tokens,
                         "estimated_cost_usd": analysis.total_cost_usd,
